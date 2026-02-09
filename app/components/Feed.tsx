@@ -3,7 +3,7 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useInView } from 'react-intersection-observer';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { PostsPage } from '@/lib/types';
 import PostModal from './PostModal';
 
@@ -11,6 +11,20 @@ export default function Feed() {
   const { ref, inView } = useInView();
   const queryClient = useQueryClient();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const savedScrollPosition = useRef<number>(0);
+  
+  // Prefetch function for post details
+  const prefetchPost = (slug: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['post', slug],
+      queryFn: async () => {
+        const res = await fetch(`/api/post/${slug}`);
+        if (!res.ok) throw new Error('Failed to fetch post');
+        return res.json();
+      },
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
+  };
   
   // This uses the server-prefetched data immediately (Instant Load)
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery<PostsPage>({
@@ -30,6 +44,18 @@ export default function Feed() {
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Restore scroll position when closing modal
+  useEffect(() => {
+    if (!selectedSlug && savedScrollPosition.current > 0) {
+      // Double RAF to ensure DOM is fully painted
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo(0, savedScrollPosition.current);
+        });
+      });
+    }
+  }, [selectedSlug]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -106,9 +132,12 @@ export default function Feed() {
                 href={`/post/${post.slug}`}
                 onClick={(e) => {
                   e.preventDefault();
+                  // Save current scroll position
+                  savedScrollPosition.current = window.scrollY;
                   setSelectedSlug(post.slug);
                   window.history.pushState(null, '', `/post/${post.slug}`);
                 }}
+                onMouseEnter={() => prefetchPost(post.slug)}
                 className="group"
               >
                 <article className="border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1">
@@ -116,7 +145,7 @@ export default function Feed() {
                     <img 
                       src={post.thumbnail} 
                       alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>

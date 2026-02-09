@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Post, PostsPage } from '@/lib/types';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 
 interface PostModalProps {
   slug: string;
@@ -12,6 +12,42 @@ interface PostModalProps {
 
 export default function PostModal({ slug, onClose, onNavigate }: PostModalProps) {
   const queryClient = useQueryClient();
+  const modalContainerRef = useRef<HTMLDivElement>(null);
+
+  // Lock body scroll when modal is open - preserve scroll position
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  // Scroll modal to top when slug changes (related post clicked)
+  useEffect(() => {
+    if (modalContainerRef.current) {
+      modalContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [slug]);
+
+  // Prefetch function for related posts
+  const prefetchPost = (postSlug: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['post', postSlug],
+      queryFn: async () => {
+        const res = await fetch(`/api/post/${postSlug}`);
+        if (!res.ok) throw new Error('Failed to fetch post');
+        return res.json();
+      },
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
+  };
 
   // 1. GET DATA FROM CACHE (Instant)
   const cachedData = useMemo(() => {
@@ -40,6 +76,7 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
 
   return (
     <div 
+      ref={modalContainerRef}
       className="fixed inset-0 bg-gradient-to-br from-gray-50 to-gray-100 z-50 overflow-y-auto"
       onClick={onClose}
     >
@@ -108,21 +145,28 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
 
             <div className="mt-12 border-t pt-8">
               <h3 className="font-bold text-2xl mb-6 text-black">Related Posts</h3>
-              {!fullPost?.relatedPosts || fullPost.relatedPosts.length === 0 ? (
+              {isFetching && (!fullPost?.relatedPosts || fullPost.relatedPosts.length === 0) ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="border rounded-lg p-4 animate-pulse">
-                      <div className="w-full h-32 bg-gray-200 rounded mb-3"></div>
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div key={i} className="border rounded-lg overflow-hidden animate-pulse">
+                      <div className="w-full h-32 bg-gray-200"></div>
+                      <div className="p-3">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      </div>
                     </div>
                   ))}
                 </div>
+              ) : !fullPost?.relatedPosts || fullPost.relatedPosts.length === 0 ? (
+                <p className="text-gray-500">No related posts available.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {fullPost.relatedPosts.map((related) => (
+                  {fullPost.relatedPosts
+                    .filter(related => related.slug !== slug)
+                    .map((related) => (
                     <button
                       key={related.id}
                       onClick={() => onNavigate(related.slug)}
+                      onMouseEnter={() => prefetchPost(related.slug)}
                       className="group block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow text-left w-full"
                     >
                       <img 

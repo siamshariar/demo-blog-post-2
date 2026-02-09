@@ -81,16 +81,19 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   
   if (!post) return null;
   
-  // Add related posts - Convert ID to array index (ID starts from 1, index from 0)
-  const currentIndex = post.id - 1;
+  // Add related posts (excluding the current post)
   const relatedIndices = [
-    Math.max(0, currentIndex - 1),
-    Math.max(0, currentIndex + 1),
-    Math.min(allPosts.length - 1, currentIndex + 2),
-  ].filter(i => i !== currentIndex && i < allPosts.length); // Remove current post
+    Math.max(0, post.id - 2),
+    Math.max(0, post.id - 1),
+    Math.min(allPosts.length - 1, post.id + 1),
+    Math.min(allPosts.length - 1, post.id + 2),
+  ];
   
   return {
     ...post,
-    relatedPosts: relatedIndices.map(i => allPosts[i]).filter(Boolean).slice(0, 3),
+    relatedPosts: relatedIndices
+      .map(i => allPosts[i])
+      .filter(p => p && p.id !== post.id) // Exclude current post
+      .slice(0, 3), // Only take 3 related posts
   };
 }

@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { useInView } from 'react-intersection-observer';
 import { useEffect } from 'react';
 import { PostsPage } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 export default function Feed() {
   const { ref, inView } = useInView();
   const queryClient = useQueryClient();
+  const router = useRouter();
   
   // This uses the server-prefetched data immediately (Instant Load)
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery<PostsPage>({
@@ -57,12 +59,12 @@ export default function Feed() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {data?.pages.map((page) =>
             page.items.map((post) => (
-              // PREFETCH={FALSE} SAVES BANDWIDTH
-              // We rely on the cache we already have for the "Instant" feel
+              // HOVER PREFETCH: Prefetch on hover for instant opening!
               <Link 
                 key={post.id} 
                 href={`/post/${post.slug}`} 
                 prefetch={false}
+                onMouseEnter={() => router.prefetch(`/post/${post.slug}`)}
                 className="group"
               >
                 <article className="border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1">

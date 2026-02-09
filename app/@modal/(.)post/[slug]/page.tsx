@@ -38,10 +38,7 @@ export default function InterceptedPostModal({
       if (!res.ok) throw new Error('Failed to fetch post');
       return res.json();
     },
-    placeholderData: cachedData ?? undefined, // Show cached data instantly
-    staleTime: 60 * 1000, // Cache for 60 seconds - no refetch
-    refetchOnMount: false, // Don't refetch when modal opens
-    refetchOnWindowFocus: false, // Don't refetch on tab switch
+    initialData: cachedData ?? undefined, // <--- CRITICAL: Uses list data until full data arrives
   });
 
   // Handle Modal Close (Browser Back works automatically)

@@ -8,12 +8,7 @@ export async function GET(request: NextRequest) {
 
     const data = await getTrendingPosts({ pageParam: page });
 
-    // Cache on Vercel Edge for 60 seconds
-    return NextResponse.json(data, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
-      },
-    });
+    return NextResponse.json(data);
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(

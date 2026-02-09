@@ -40,7 +40,7 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
 
   return (
     <div 
-      className="fixed inset-0 bg-white z-50 overflow-y-auto"
+      className="fixed inset-0 bg-gradient-to-br from-gray-50 to-gray-100 z-50 overflow-y-auto"
       onClick={onClose}
     >
       <div 

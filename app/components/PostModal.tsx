@@ -37,7 +37,7 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
       document.body.style.width = '';
       document.body.style.paddingRight = '';
       document.body.style.overflow = '';
-      window.scrollTo(0, scrollY);
+      // Don't restore scroll here - parent component handles it
     };
   }, []);
 

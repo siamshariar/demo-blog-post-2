@@ -1,24 +1,27 @@
 'use client';
 
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { usePathname } from 'next/navigation';
 import { PostsPage } from '@/lib/types';
+import PostModal from './PostModal';
 
 export default function VirtualizedFeed() {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const [shouldLoadMore, setShouldLoadMore] = useState(false);
-  const pathname = usePathname();
-  const currentModalSlug = pathname && pathname.startsWith('/post/') ? pathname.replace('/post/', '') : null;
+  const [modalSlug, setModalSlug] = useState<string | null>(null);
   const savedScrollRef = useRef<number>(0);
-  const [modalSlug, setModalSlug] = useState<string | null>(currentModalSlug);
-
+  
+  // Check URL on mount for direct navigation or reload
   useEffect(() => {
-    setModalSlug(currentModalSlug);
-  }, [currentModalSlug]);
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.startsWith('/post/')) {
+        const slug = path.replace('/post/', '');
+        setModalSlug(slug);
+      }
+    }
+  }, []);
   
   // Detect columns based on screen width
   const [columns, setColumns] = useState(3);
@@ -48,10 +51,50 @@ export default function VirtualizedFeed() {
       staleTime: 5 * 60 * 1000,
     });
   };
-  // Handle instant modal open
+  
+  // Handle instant modal open (state-based, no navigation)
   const handlePostClick = (slug: string) => {
-    router.push(`/post/${slug}`);
+    // Save scroll position before opening modal
+    savedScrollRef.current = window.scrollY;
+    setModalSlug(slug);
+    // Update URL without navigation (for reload support)
+    window.history.pushState(null, '', `/post/${slug}`);
   };
+  
+  // Handle modal close
+  const handleModalClose = () => {
+    setModalSlug(null);
+    // Restore URL to home
+    window.history.pushState(null, '', '/');
+    // Restore scroll position after modal closes
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: savedScrollRef.current, behavior: 'instant' });
+    });
+  };
+  
+  // Handle modal navigate (when clicking related posts)
+  const handleModalNavigate = (slug: string) => {
+    // Don't reset scroll position when navigating between modals
+    setModalSlug(slug);
+    // Update URL without navigation
+    window.history.pushState(null, '', `/post/${slug}`);
+  };
+  
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/post/')) {
+        const slug = path.replace('/post/', '');
+        setModalSlug(slug);
+      } else {
+        setModalSlug(null);
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery<PostsPage>({
     queryKey: ['posts'],
@@ -113,59 +156,16 @@ export default function VirtualizedFeed() {
     }
   }, [shouldLoadMore, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Save and restore scroll position for modal navigation
-  useEffect(() => {
-    if (pathname.startsWith('/post/')) {
-      // Save scroll position when navigating to modal
-      savedScrollRef.current = window.scrollY;
-    } else {
-      // Restore scroll position when back to feed
-      if (savedScrollRef.current > 0) {
-        // Wait for virtualizer to render content before restoring scroll
-        const scrollPos = savedScrollRef.current;
-        
-        // Use multiple attempts with increasing delays to ensure proper restoration
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: scrollPos, behavior: 'instant' });
-          
-          setTimeout(() => {
-            window.scrollTo({ top: scrollPos, behavior: 'instant' });
-            
-            setTimeout(() => {
-              window.scrollTo({ top: scrollPos, behavior: 'instant' });
-            }, 100);
-          }, 50);
-        });
-      }
-    }
-  }, [pathname]);
-
-  // Handle scroll position for browser tab switching
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Save scroll position when tab becomes hidden
-        savedScrollRef.current = window.scrollY;
-      } else {
-        // Browser automatically restores scroll position on tab switch
-        // No manual restoration needed for better native feel
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
-
   // ESC key to close modal if open
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && pathname.startsWith('/post/')) {
-        window.history.back();
+      if (e.key === 'Escape' && modalSlug) {
+        handleModalClose();
       }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [pathname]);
+  }, [modalSlug]);
 
   if (isLoading) {
     return (
@@ -185,8 +185,17 @@ export default function VirtualizedFeed() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <>
+      {modalSlug && (
+        <PostModal 
+          slug={modalSlug}
+          onClose={handleModalClose}
+          onNavigate={handleModalNavigate}
+        />
+      )}
+      
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-7xl mx-auto px-4 py-8">
         <header className="mb-8">
           <h1 className="text-4xl font-bold text-black mb-2">Trending Posts</h1>
           <p className="text-black mb-3">Instant-loading with smart caching • Virtualized for performance ⚡</p>
@@ -240,7 +249,7 @@ export default function VirtualizedFeed() {
                       >
                         <article className="relative border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1 mb-6">
                           <div className="relative h-48 overflow-hidden">
-                            <span className={`absolute top-3 left-3 z-20 inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full transition-opacity duration-200 ${currentModalSlug === post.slug ? 'opacity-100' : 'opacity-0'}`}>
+                            <span className={`absolute top-3 left-3 z-20 inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full transition-opacity duration-200 ${modalSlug === post.slug ? 'opacity-100' : 'opacity-0'}`}>
                               🎭 Modal View
                             </span>
                             <img 
@@ -284,7 +293,8 @@ export default function VirtualizedFeed() {
             <p className="text-black text-sm">🎉 You've reached the end! ({allPosts.length} posts)</p>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

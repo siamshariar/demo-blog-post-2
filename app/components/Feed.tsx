@@ -1,15 +1,27 @@
 'use client';
 
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { useInView } from 'react-intersection-observer';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { PostsPage } from '@/lib/types';
+import PostModal from './PostModal';
 
 export default function Feed() {
   const { ref, inView } = useInView();
   const queryClient = useQueryClient();
-  const router = useRouter();
+  const [modalSlug, setModalSlug] = useState<string | null>(null);
+  const savedScrollRef = useRef<number>(0);
+  
+  // Check URL on mount for direct navigation or reload
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.startsWith('/post/')) {
+        const slug = path.replace('/post/', '');
+        setModalSlug(slug);
+      }
+    }
+  }, []);
   
   // Prefetch function for post details
   const prefetchPost = (slug: string) => {
@@ -24,10 +36,60 @@ export default function Feed() {
     });
   };
   
-  // Handle instant modal open
+  // Handle instant modal open (state-based, no navigation)
   const handlePostClick = (slug: string) => {
-    router.push(`/post/${slug}`);
+    // Save scroll position before opening modal
+    savedScrollRef.current = window.scrollY;
+    setModalSlug(slug);
+    // Update URL without navigation (for reload support)
+    window.history.pushState(null, '', `/post/${slug}`);
   };
+  
+  // Handle modal close
+  const handleModalClose = () => {
+    setModalSlug(null);
+    // Restore URL to home
+    window.history.pushState(null, '', '/');
+    // Restore scroll position after modal closes
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: savedScrollRef.current, behavior: 'instant' });
+    });
+  };
+  
+  // Handle modal navigate (when clicking related posts)
+  const handleModalNavigate = (slug: string) => {
+    // Don't reset scroll position when navigating between modals
+    setModalSlug(slug);
+    // Update URL without navigation
+    window.history.pushState(null, '', `/post/${slug}`);
+  };
+  
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/post/')) {
+        const slug = path.replace('/post/', '');
+        setModalSlug(slug);
+      } else {
+        setModalSlug(null);
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+  
+  // ESC key to close modal if open
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && modalSlug) {
+        handleModalClose();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [modalSlug]);
   
   // This uses the server-prefetched data immediately (Instant Load)
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery<PostsPage>({
@@ -66,8 +128,17 @@ export default function Feed() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <>
+      {modalSlug && (
+        <PostModal 
+          slug={modalSlug}
+          onClose={handleModalClose}
+          onNavigate={handleModalNavigate}
+        />
+      )}
+      
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-7xl mx-auto px-4 py-8">
         <header className="mb-8">
           <h1 className="text-4xl font-bold text-black mb-2">Trending Posts</h1>
           <p className="text-black mb-3">Instant-loading with smart caching • Click any post to see the magic ✨</p>
@@ -81,43 +152,41 @@ export default function Feed() {
             <span className="px-2 py-1 bg-green-50 text-green-700 rounded">
               ⚡ Virtualized Rendering
             </span>
-          </divbutton
-                key={post.id}
-                onClick={() => handlePostClick(post.slug)}
-                onMouseEnter={() => prefetchPost(post.slug)}
-                className="group text-left w-full cursor-pointer"
-              >
-                <article className="border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1">
-                  <div className="relative h-48 overflow-hidden">
-                    <img 
-                      src={post.thumbnail} 
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {data?.pages.flatMap((page) => page.items).map((post) => (
+            <button
+              key={post.id}
+              onClick={() => handlePostClick(post.slug)}
+              onMouseEnter={() => prefetchPost(post.slug)}
+              className="group text-left w-full cursor-pointer"
+            >
+              <article className="border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1">
+                <div className="relative h-48 overflow-hidden">
+                  <img 
+                    src={post.thumbnail} 
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div className="p-4">
+                  <h2 className="font-bold text-lg text-black mb-2 group-hover:text-black transition-colors line-clamp-2">
+                    {post.title}
+                  </h2>
+                  <p className="text-black text-sm line-clamp-3 mb-3">
+                    {post.shortDesc}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-black">
+                    <span>{post.author}</span>
+                    <span>ID: {post.id}</span>
                   </div>
-                  <div className="p-4">
-                    <h2 className="font-bold text-lg text-black mb-2 group-hover:text-black transition-colors line-clamp-2">
-                      {post.title}
-                    </h2>
-                    <p className="text-black text-sm line-clamp-3 mb-3">
-                      {post.shortDesc}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-black">
-                      <span>{post.author}</span>
-                      <span>ID: {post.id}</span>
-                    </div>
-                  </div>
-                </article>
-              </button<div className="flex items-center justify-between text-xs text-black">
-                      <span>{post.author}</span>
-                      <span>ID: {post.id}</span>
-                    </div>
-                  </div>
-                </article>
-              </Link>
-            ))
-          )}
+                </div>
+              </article>
+            </button>
+          ))}
         </div>
 
         {/* Infinite Scroll Trigger */}
@@ -133,7 +202,8 @@ export default function Feed() {
             <p className="text-black text-sm">🎉 You've reached the end!</p>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

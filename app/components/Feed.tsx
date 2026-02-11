@@ -94,12 +94,12 @@ export default function Feed() {
     getNextPageParam: (lastPage) => lastPage.nextPage,
   });
 
-  // Infinite Scroll Logic
+  // Infinite Scroll Logic - disabled when modal is open
   useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
+    if (inView && hasNextPage && !isFetchingNextPage && !modalSlug) {
       fetchNextPage();
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, modalSlug]);
 
   if (isLoading) {
     return (

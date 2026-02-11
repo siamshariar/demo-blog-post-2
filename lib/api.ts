@@ -49,9 +49,9 @@ const generateMockPosts = (start: number, count: number): Post[] => {
 // Simulate database
 let allPosts: Post[] = [];
 
-// Initialize with 1000 posts for demo
+// Initialize with 100,000 posts for demo
 if (allPosts.length === 0) {
-  allPosts = generateMockPosts(1, 1000);
+  allPosts = generateMockPosts(1, 100000);
 }
 
 // API Functions

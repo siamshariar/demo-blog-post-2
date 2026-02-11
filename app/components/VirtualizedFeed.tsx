@@ -119,6 +119,9 @@ export default function VirtualizedFeed() {
 
   // Pinterest-style: Load more when user scrolls past 50-60% (aggressive loading for fast scroll)
   useEffect(() => {
+    // Don't run scroll detection when modal is open
+    if (modalSlug) return;
+    
     let rafId: number;
     let isChecking = false;
     
@@ -157,7 +160,7 @@ export default function VirtualizedFeed() {
         cancelAnimationFrame(rafId);
       }
     };
-  }, [hasNextPage, isFetchingNextPage]);
+  }, [hasNextPage, isFetchingNextPage, modalSlug]);
 
   useEffect(() => {
     if (shouldLoadMore && hasNextPage && !isFetchingNextPage) {

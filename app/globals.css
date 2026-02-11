@@ -26,9 +26,24 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Smooth scrolling for both modal and detail page */
+/* Prevent layout shift when modal opens */
 html {
   scroll-behavior: smooth;
+}
+
+/* Instant scroll for modal transitions */
+html.modal-opening {
+  scroll-behavior: auto !important;
+}
+
+/* Instant modal rendering - no transitions on mount */
+.modal-container {
+  will-change: transform;
+}
+
+/* Prevent any transition delays for modals */
+[data-modal-open] {
+  transition: none !important;
 }
 
 /* Custom scrollbar for consistent styling across modal and detail page */

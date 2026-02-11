@@ -1,7 +1,7 @@
 'use client';
 
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useInView } from 'react-intersection-observer';
 import { useEffect } from 'react';
 import { PostsPage } from '@/lib/types';
@@ -9,6 +9,7 @@ import { PostsPage } from '@/lib/types';
 export default function Feed() {
   const { ref, inView } = useInView();
   const queryClient = useQueryClient();
+  const router = useRouter();
   
   // Prefetch function for post details
   const prefetchPost = (slug: string) => {
@@ -21,6 +22,11 @@ export default function Feed() {
       },
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
+  };
+  
+  // Handle instant modal open
+  const handlePostClick = (slug: string) => {
+    router.push(`/post/${slug}`);
   };
   
   // This uses the server-prefetched data immediately (Instant Load)
@@ -75,17 +81,11 @@ export default function Feed() {
             <span className="px-2 py-1 bg-green-50 text-green-700 rounded">
               ⚡ Virtualized Rendering
             </span>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {data?.pages.map((page) =>
-            page.items.map((post) => (
-              <Link
+          </divbutton
                 key={post.id}
-                href={`/post/${post.slug}`}
+                onClick={() => handlePostClick(post.slug)}
                 onMouseEnter={() => prefetchPost(post.slug)}
-                className="group"
+                className="group text-left w-full cursor-pointer"
               >
                 <article className="border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1">
                   <div className="relative h-48 overflow-hidden">
@@ -104,6 +104,12 @@ export default function Feed() {
                       {post.shortDesc}
                     </p>
                     <div className="flex items-center justify-between text-xs text-black">
+                      <span>{post.author}</span>
+                      <span>ID: {post.id}</span>
+                    </div>
+                  </div>
+                </article>
+              </button<div className="flex items-center justify-between text-xs text-black">
                       <span>{post.author}</span>
                       <span>ID: {post.id}</span>
                     </div>

@@ -18,17 +18,28 @@ export default function InterceptedPostModal({
   // Unwrap params INSTANTLY during render (not in useEffect!)
   const { slug } = use(params);
 
-  // Lock body scroll when modal is open - preserve scroll position
+  // Lock body scroll when modal is open - NO SCROLLBAR BLINK!
   useEffect(() => {
+    // Add class for instant scroll
+    document.documentElement.classList.add('modal-opening');
+    
     const scrollY = window.scrollY;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    
+    // Prevent layout shift by compensating for scrollbar
     document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = '100%';
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+    document.body.style.overflow = 'hidden';
     
     return () => {
+      document.documentElement.classList.remove('modal-opening');
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
+      document.body.style.paddingRight = '';
+      document.body.style.overflow = '';
       window.scrollTo(0, scrollY);
     };
   }, []);
@@ -62,7 +73,8 @@ export default function InterceptedPostModal({
       if (!res.ok) throw new Error('Failed to fetch post');
       return res.json();
     },
-    placeholderData: cachedData ?? undefined,
+    initialData: cachedData,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Handle Modal Close (Browser Back works automatically)
@@ -97,7 +109,8 @@ export default function InterceptedPostModal({
   return (
     <div 
       ref={modalContainerRef}
-      className="fixed inset-0 bg-gradient-to-br from-gray-50 to-gray-100 z-50 overflow-y-auto"
+      data-modal-open="true"
+      className="modal-container fixed inset-0 bg-gradient-to-br from-gray-50 to-gray-100 z-50 overflow-y-auto"
     >
       {/* Backdrop overlay */}
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100" onClick={(e) => e.stopPropagation()}>

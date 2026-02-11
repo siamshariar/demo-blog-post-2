@@ -1,7 +1,7 @@
 'use client';
 
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { usePathname } from 'next/navigation';
@@ -9,6 +9,7 @@ import { PostsPage } from '@/lib/types';
 
 export default function VirtualizedFeed() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [shouldLoadMore, setShouldLoadMore] = useState(false);
   const pathname = usePathname();
   const currentModalSlug = pathname && pathname.startsWith('/post/') ? pathname.replace('/post/', '') : null;
@@ -46,6 +47,10 @@ export default function VirtualizedFeed() {
       },
       staleTime: 5 * 60 * 1000,
     });
+  };
+  // Handle instant modal open
+  const handlePostClick = (slug: string) => {
+    router.push(`/post/${slug}`);
   };
   
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery<PostsPage>({
@@ -227,11 +232,11 @@ export default function VirtualizedFeed() {
                     'grid-cols-3'
                   }`}>
                     {rowPosts.map((post) => (
-                      <Link
+                      <button
                         key={post.id}
-                        href={`/post/${post.slug}`}
+                        onClick={() => handlePostClick(post.slug)}
                         onMouseEnter={() => prefetchPost(post.slug)}
-                        className="group"
+                        className="group text-left w-full cursor-pointer"
                       >
                         <article className="relative border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1 mb-6">
                           <div className="relative h-48 overflow-hidden">
@@ -258,7 +263,7 @@ export default function VirtualizedFeed() {
                             </div>
                           </div>
                         </article>
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 </div>

@@ -73,19 +73,6 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
     }
   }, [slug]);
 
-  // Prefetch function for related posts
-  const prefetchPost = (postSlug: string) => {
-    queryClient.prefetchQuery({
-      queryKey: ['post', postSlug],
-      queryFn: async () => {
-        const res = await fetch(`/api/post/${postSlug}`);
-        if (!res.ok) throw new Error('Failed to fetch post');
-        return res.json();
-      },
-      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    });
-  };
-
   // Helper function to update meta tags
   const updateMetaTag = (attr: string, key: string, content: string) => {
     let element = document.querySelector(`meta[${attr}="${key}"]`);
@@ -235,7 +222,6 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
                     <button
                       key={related.id}
                       onClick={() => onNavigate(related.slug)}
-                      onMouseEnter={() => prefetchPost(related.slug)}
                       className="group block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow text-left w-full cursor-pointer"
                     >
                       <img 

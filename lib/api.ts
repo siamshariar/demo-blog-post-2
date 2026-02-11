@@ -59,7 +59,7 @@ export async function getTrendingPosts({ pageParam = 1 }: { pageParam?: number }
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 300));
   
-  const PAGE_SIZE = 12;
+  const PAGE_SIZE = 48;
   const start = (pageParam - 1) * PAGE_SIZE;
   const end = start + PAGE_SIZE;
   

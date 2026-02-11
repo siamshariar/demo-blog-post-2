@@ -39,19 +39,6 @@ export default function VirtualizedFeed() {
     return () => window.removeEventListener('resize', updateColumns);
   }, []);
   
-  // Prefetch function for post details
-  const prefetchPost = (slug: string) => {
-    queryClient.prefetchQuery({
-      queryKey: ['post', slug],
-      queryFn: async () => {
-        const res = await fetch(`/api/post/${slug}`);
-        if (!res.ok) throw new Error('Failed to fetch post');
-        return res.json();
-      },
-      staleTime: 5 * 60 * 1000,
-    });
-  };
-  
   // Handle instant modal open (state-based, no navigation)
   const handlePostClick = (slug: string) => {
     // Save scroll position before opening modal
@@ -130,23 +117,46 @@ export default function VirtualizedFeed() {
     overscan: 5,
   });
 
-  // Pinterest-style: Load more when user scrolls near bottom (within 800px)
+  // Pinterest-style: Load more when user scrolls past 50-60% (aggressive loading for fast scroll)
   useEffect(() => {
-    const handleScroll = () => {
-      if (!hasNextPage || isFetchingNextPage) return;
+    let rafId: number;
+    let isChecking = false;
+    
+    const checkScroll = () => {
+      if (isChecking || !hasNextPage || isFetchingNextPage) {
+        rafId = requestAnimationFrame(checkScroll);
+        return;
+      }
       
       const scrollTop = window.scrollY;
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
       
-      // Trigger when within 800px of bottom
-      if (scrollTop + windowHeight >= documentHeight - 800) {
+      // Calculate how much content is left below viewport
+      const scrollableHeight = documentHeight - windowHeight;
+      const scrolledPercentage = (scrollTop / scrollableHeight) * 100;
+      
+      // Trigger when user has scrolled 50% or more, or within 1500px of bottom
+      // This ensures loading happens early, even during fast scroll
+      if (scrolledPercentage >= 50 || scrollTop + windowHeight >= documentHeight - 1500) {
+        isChecking = true;
         setShouldLoadMore(true);
+        // Reset after a short delay to allow the fetch to start
+        setTimeout(() => {
+          isChecking = false;
+        }, 100);
+      }
+      
+      rafId = requestAnimationFrame(checkScroll);
+    };
+    
+    rafId = requestAnimationFrame(checkScroll);
+    
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
       }
     };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
   }, [hasNextPage, isFetchingNextPage]);
 
   useEffect(() => {
@@ -244,7 +254,6 @@ export default function VirtualizedFeed() {
                       <button
                         key={post.id}
                         onClick={() => handlePostClick(post.slug)}
-                        onMouseEnter={() => prefetchPost(post.slug)}
                         className="group text-left w-full cursor-pointer"
                       >
                         <article className="relative border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1 mb-6">

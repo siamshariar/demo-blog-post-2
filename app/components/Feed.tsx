@@ -7,7 +7,11 @@ import { PostsPage } from '@/lib/types';
 import PostModal from './PostModal';
 
 export default function Feed() {
-  const { ref, inView } = useInView();
+  // Use larger rootMargin for earlier trigger (2000px before reaching the element)
+  const { ref, inView } = useInView({
+    threshold: 0,
+    rootMargin: '2000px',
+  });
   const queryClient = useQueryClient();
   const [modalSlug, setModalSlug] = useState<string | null>(null);
   const savedScrollRef = useRef<number>(0);
@@ -22,19 +26,6 @@ export default function Feed() {
       }
     }
   }, []);
-  
-  // Prefetch function for post details
-  const prefetchPost = (slug: string) => {
-    queryClient.prefetchQuery({
-      queryKey: ['post', slug],
-      queryFn: async () => {
-        const res = await fetch(`/api/post/${slug}`);
-        if (!res.ok) throw new Error('Failed to fetch post');
-        return res.json();
-      },
-      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    });
-  };
   
   // Handle instant modal open (state-based, no navigation)
   const handlePostClick = (slug: string) => {
@@ -160,7 +151,6 @@ export default function Feed() {
             <button
               key={post.id}
               onClick={() => handlePostClick(post.slug)}
-              onMouseEnter={() => prefetchPost(post.slug)}
               className="group text-left w-full cursor-pointer"
             >
               <article className="border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1">

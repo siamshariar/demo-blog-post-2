@@ -104,7 +104,7 @@ export default function InterceptedPostModal({
         <PostContainer header={
           <button
             onClick={onDismiss}
-            className="inline-flex items-center gap-2 text-black hover:text-black mb-6 group"
+            className="inline-flex items-center gap-2 text-black hover:text-black mb-6 group cursor-pointer"
           >
             <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -114,11 +114,11 @@ export default function InterceptedPostModal({
         }>
           <div className="mb-6">
             <div className="flex gap-2 mb-4">
-              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                📄 Detail Page
+              <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                🎭 Modal View
               </span>
               <span className="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                🔍 SEO Optimized
+                ⚡ Instant Cache
               </span>
               {isFetching && (
                 <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full animate-pulse">
@@ -186,7 +186,7 @@ export default function InterceptedPostModal({
                     key={related.id}
                     onClick={() => onNavigate(related.slug)}
                     onMouseEnter={() => prefetchPost(related.slug)}
-                    className="group block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow text-left w-full"
+                    className="group block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow text-left w-full cursor-pointer"
                   >
                     <img 
                       src={related.thumbnail} 

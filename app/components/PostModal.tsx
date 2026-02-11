@@ -83,7 +83,7 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
       <PostContainer header={
         <button
           onClick={onClose}
-          className="inline-flex items-center gap-2 text-black hover:text-black mb-6 group"
+          className="inline-flex items-center gap-2 text-black hover:text-black mb-6 group cursor-pointer"
         >
           <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -142,7 +142,7 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
             <div className="mt-12 border-t pt-8">
               <h3 className="font-bold text-2xl mb-6 text-black">Related Posts</h3>
               {isFetching && (!fullPost?.relatedPosts || fullPost.relatedPosts.length === 0) ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="border rounded-lg overflow-hidden animate-pulse">
                       <div className="w-full h-32 bg-gray-200"></div>
@@ -155,7 +155,7 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
               ) : !fullPost?.relatedPosts || fullPost.relatedPosts.length === 0 ? (
                 <p className="text-gray-500">No related posts available.</p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {fullPost.relatedPosts
                     .filter(related => related.slug !== slug)
                     .map((related) => (
@@ -163,7 +163,7 @@ export default function PostModal({ slug, onClose, onNavigate }: PostModalProps)
                       key={related.id}
                       onClick={() => onNavigate(related.slug)}
                       onMouseEnter={() => prefetchPost(related.slug)}
-                      className="group block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow text-left w-full"
+                      className="group block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow text-left w-full cursor-pointer"
                     >
                       <img 
                         src={related.thumbnail} 

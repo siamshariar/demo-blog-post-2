@@ -58,14 +58,14 @@ export default function PostDetailClient({ post }: PostDetailClientProps) {
         {!post.relatedPosts || post.relatedPosts.length === 0 ? (
           <p className="text-gray-500">No related posts available.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {post.relatedPosts
               .filter(related => related.slug !== post.slug)
               .map((related) => (
               <Link
                 key={related.id}
                 href={`/post/${related.slug}`}
-                className="group block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
+                className="group block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
               >
                 <img 
                   src={related.thumbnail} 

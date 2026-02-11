@@ -3,16 +3,12 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useInView } from 'react-intersection-observer';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect } from 'react';
 import { PostsPage } from '@/lib/types';
-import PostModal from './PostModal';
-import { useRouter } from 'next/navigation';
 
 export default function Feed() {
   const { ref, inView } = useInView();
   const queryClient = useQueryClient();
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const savedScrollPosition = useRef<number>(0);
   
   // Prefetch function for post details
   const prefetchPost = (slug: string) => {
@@ -28,7 +24,6 @@ export default function Feed() {
   };
   
   // This uses the server-prefetched data immediately (Instant Load)
-  const router = useRouter();
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery<PostsPage>({
     queryKey: ['posts'],
     queryFn: async ({ pageParam }) => {
@@ -46,52 +41,6 @@ export default function Feed() {
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // Restore scroll position when closing modal
-  useEffect(() => {
-    if (!selectedSlug && savedScrollPosition.current > 0) {
-      // Double RAF to ensure DOM is fully painted
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.scrollTo(0, savedScrollPosition.current);
-        });
-      });
-    }
-  }, [selectedSlug]);
-
-  // Handle browser back/forward
-  useEffect(() => {
-    // Check initial URL on mount
-    const path = window.location.pathname;
-    if (path.startsWith('/post/')) {
-      const slug = path.replace('/post/', '');
-      setSelectedSlug(slug);
-    }
-
-    const handlePopState = () => {
-      const currentPath = window.location.pathname;
-      if (currentPath.startsWith('/post/')) {
-        const slug = currentPath.replace('/post/', '');
-        setSelectedSlug(slug);
-      } else {
-        setSelectedSlug(null);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  // ESC key to close modal
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && selectedSlug) {
-        window.history.back();
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [selectedSlug]);
 
   if (isLoading) {
     return (
@@ -111,8 +60,8 @@ export default function Feed() {
   }
 
   return (
-    <div className={`min-h-screen ${selectedSlug ? 'bg-white' : 'bg-gradient-to-br from-gray-50 to-gray-100'}`}>
-      <div className={`max-w-7xl mx-auto px-4 py-8 ${selectedSlug ? 'hidden' : ''}`}>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <header className="mb-8">
           <h1 className="text-4xl font-bold text-black mb-2">Trending Posts</h1>
           <p className="text-black mb-3">Instant-loading with smart caching • Click any post to see the magic ✨</p>
@@ -123,6 +72,9 @@ export default function Feed() {
             <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded">
               📄 Refresh = Detail Page (SEO)
             </span>
+            <span className="px-2 py-1 bg-green-50 text-green-700 rounded">
+              ⚡ Virtualized Rendering
+            </span>
           </div>
         </header>
 
@@ -132,13 +84,6 @@ export default function Feed() {
               <Link
                 key={post.id}
                 href={`/post/${post.slug}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Save current scroll position
-                  savedScrollPosition.current = window.scrollY;
-                  setSelectedSlug(post.slug);
-                  window.history.pushState(null, '', `/post/${post.slug}`);
-                }}
                 onMouseEnter={() => prefetchPost(post.slug)}
                 className="group"
               >
@@ -183,19 +128,6 @@ export default function Feed() {
           )}
         </div>
       </div>
-
-      {/* Instant Modal */}
-      {selectedSlug && (
-        <PostModal 
-          slug={selectedSlug} 
-          onClose={() => window.history.back()}
-          onNavigate={(newSlug) => {
-            // Close the modal and navigate client-side to full post page
-            setSelectedSlug(null);
-            router.push(`/post/${newSlug}`);
-          }}
-        />
-      )}
     </div>
   );
 }

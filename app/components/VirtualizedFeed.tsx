@@ -11,7 +11,13 @@ export default function VirtualizedFeed() {
   const queryClient = useQueryClient();
   const [shouldLoadMore, setShouldLoadMore] = useState(false);
   const pathname = usePathname();
+  const currentModalSlug = pathname && pathname.startsWith('/post/') ? pathname.replace('/post/', '') : null;
   const savedScrollRef = useRef<number>(0);
+  const [modalSlug, setModalSlug] = useState<string | null>(currentModalSlug);
+
+  useEffect(() => {
+    setModalSlug(currentModalSlug);
+  }, [currentModalSlug]);
   
   // Detect columns based on screen width
   const [columns, setColumns] = useState(3);
@@ -71,7 +77,8 @@ export default function VirtualizedFeed() {
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => (typeof window !== 'undefined' ? document.documentElement : null),
-    estimateSize: () => 380,
+    // base estimate (380) + card bottom margin (mb-6 = 24px) to account for spacing between rows
+    estimateSize: () => 404,
     overscan: 5,
   });
 
@@ -193,6 +200,7 @@ export default function VirtualizedFeed() {
 
         {/* Virtualized Grid - Using Window Scroll */}
         <div
+          key={`virtual-grid-${modalSlug ?? 'none'}`}
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
             width: '100%',
@@ -213,7 +221,7 @@ export default function VirtualizedFeed() {
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  <div className={`grid gap-6 mb-8 ${
+                  <div className={`grid gap-x-6 gap-y-6 ${
                     columns === 1 ? 'grid-cols-1' : 
                     columns === 2 ? 'grid-cols-2' : 
                     'grid-cols-3'
@@ -225,8 +233,11 @@ export default function VirtualizedFeed() {
                         onMouseEnter={() => prefetchPost(post.slug)}
                         className="group"
                       >
-                        <article className="border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1">
+                        <article className="relative border rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden transform group-hover:-translate-y-1 mb-6">
                           <div className="relative h-48 overflow-hidden">
+                            <span className={`absolute top-3 left-3 z-20 inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full transition-opacity duration-200 ${currentModalSlug === post.slug ? 'opacity-100' : 'opacity-0'}`}>
+                              🎭 Modal View
+                            </span>
                             <img 
                               src={post.thumbnail} 
                               alt={post.title}
